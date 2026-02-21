@@ -7,6 +7,7 @@ pipeline {
         GOOGLE_CLIENT_ID = credentials('GOOGLE_CLIENT_ID')
         GOOGLE_CLIENT_SECRET = credentials('GOOGLE_CLIENT_SECRET')
         BACKEND_URL = "http://localhost:5000"
+        FRONTEND_URL = "http://localhost:3000"
     }
 
     stages {
@@ -15,6 +16,19 @@ pipeline {
             steps {
                 git branch: 'main',
                     url: 'https://github.com/YOUR_USERNAME/YOUR_REPO.git'
+            }
+        }
+
+        stage('Create .env file') {
+            steps {
+                writeFile file: '.env', text: """
+MONGO_URL=${MONGO_URL}
+JWT_SECRET=${JWT_SECRET}
+GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+BACKEND_URL=${BACKEND_URL}
+FRONTEND_URL=${FRONTEND_URL}
+"""
             }
         }
 
@@ -40,15 +54,6 @@ pipeline {
             steps {
                 bat 'docker ps'
             }
-        }
-    }
-
-    post {
-        success {
-            echo 'Deployment Successful 🚀'
-        }
-        failure {
-            echo 'Deployment Failed ❌'
         }
     }
 }
