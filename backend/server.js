@@ -12,10 +12,15 @@ const User = require("./models/models/User");
 
 const app = express();
 
+/* ================= ENV SAFE DEFAULTS ================= */
+
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3001";
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5000";
+
 /* ================= GLOBAL MIDDLEWARE ================= */
 
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: FRONTEND_URL,
   credentials: true
 }));
 
@@ -38,9 +43,7 @@ mongoose.connect(process.env.MONGO_URL)
 
 /* ================= PASSPORT CONFIG ================= */
 
-passport.serializeUser((user, done) => {
-  done(null, user.id);
-});
+passport.serializeUser((user, done) => done(null, user.id));
 
 passport.deserializeUser(async (id, done) => {
   try {
@@ -53,21 +56,23 @@ passport.deserializeUser(async (id, done) => {
 
 /* ================= GOOGLE STRATEGY ================= */
 
-passport.use(new GoogleStrategy({
+passport.use(new GoogleStrategy(
+{
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: process.env.BACKEND_URL + "/auth/google/callback"
+  callbackURL: `${BACKEND_URL}/auth/google/callback`
 },
 async (accessToken, refreshToken, profile, done) => {
   try {
+
     let user = await User.findOne({ googleId: profile.id });
 
     if (!user) {
       user = await User.create({
         googleId: profile.id,
-        email: profile.emails[0].value,
+        email: profile.emails?.[0]?.value,
         name: profile.displayName,
-        profilePic: profile.photos[0].value,
+        profilePic: profile.photos?.[0]?.value,
         provider: "google"
       });
     }
@@ -76,7 +81,7 @@ async (accessToken, refreshToken, profile, done) => {
 
   } catch (error) {
     console.log("Google Auth Error:", error);
-    done(error, null);
+    return done(error, null);
   }
 }));
 
@@ -94,7 +99,7 @@ const verifyToken = (req, res, next) => {
     req.userId = decoded.id;
     next();
 
-  } catch (error) {
+  } catch {
     res.status(401).json({ message: "Unauthorized" });
   }
 };
@@ -103,6 +108,7 @@ const verifyToken = (req, res, next) => {
 
 app.post("/api/signup", async (req, res) => {
   try {
+
     const { email, password } = req.body;
 
     const existingUser = await User.findOne({ email });
@@ -119,7 +125,7 @@ app.post("/api/signup", async (req, res) => {
 
     res.json({ message: "Signup successful" });
 
-  } catch (error) {
+  } catch {
     res.status(500).json({ message: "Signup failed" });
   }
 });
@@ -128,6 +134,7 @@ app.post("/api/signup", async (req, res) => {
 
 app.post("/api/login", async (req, res) => {
   try {
+
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
@@ -146,7 +153,7 @@ app.post("/api/login", async (req, res) => {
 
     res.json({ token });
 
-  } catch (error) {
+  } catch {
     res.status(500).json({ message: "Login failed" });
   }
 });
@@ -167,21 +174,20 @@ app.get("/auth/google/callback",
       { expiresIn: "1h" }
     );
 
-    res.redirect(`${process.env.FRONTEND_URL}/oauth-success?token=${token}`);
+    res.redirect(`${FRONTEND_URL}/oauth-success?token=${token}`);
   }
 );
 
-/* ================= GET CURRENT USER ================= */
+/* ================= USER ROUTES ================= */
 
 app.get("/api/user", verifyToken, async (req, res) => {
   const user = await User.findById(req.userId).select("-password");
   res.json(user);
 });
 
-/* ================= UPDATE PROFILE ================= */
-
 app.put("/api/user/update", verifyToken, async (req, res) => {
   try {
+
     const { name, profilePic } = req.body;
 
     const user = await User.findByIdAndUpdate(
@@ -192,15 +198,14 @@ app.put("/api/user/update", verifyToken, async (req, res) => {
 
     res.json(user);
 
-  } catch (error) {
+  } catch {
     res.status(500).json({ message: "Update failed" });
   }
 });
 
-/* ================= CHANGE PASSWORD ================= */
-
 app.put("/api/user/change-password", verifyToken, async (req, res) => {
   try {
+
     const { currentPassword, newPassword } = req.body;
 
     const user = await User.findById(req.userId);
@@ -209,21 +214,21 @@ app.put("/api/user/change-password", verifyToken, async (req, res) => {
     if (!isMatch)
       return res.status(400).json({ message: "Wrong current password" });
 
-    const hashed = await bcrypt.hash(newPassword, 10);
-    user.password = hashed;
+    user.password = await bcrypt.hash(newPassword, 10);
     await user.save();
 
     res.json({ message: "Password updated successfully" });
 
-  } catch (error) {
+  } catch {
     res.status(500).json({ message: "Password update failed" });
   }
 });
 
-/* ================= PROTECTED AIRDATA ROUTE ================= */
+/* ================= AIR DATA ================= */
 
 app.get("/api/airdata", verifyToken, async (req, res) => {
   try {
+
     const data = await mongoose.connection.db
       .collection("airdata")
       .find()
@@ -232,12 +237,13 @@ app.get("/api/airdata", verifyToken, async (req, res) => {
 
     res.json(data);
 
-  } catch (error) {
+  } catch {
     res.status(500).json({ message: "Data fetch failed" });
   }
 });
 
 /* ================= START SERVER ================= */
-app.listen(5000, '0.0.0.0', () => {
-  console.log("Server running");
+
+app.listen(5000, "0.0.0.0", () => {
+  console.log("🚀 Server running on port 5000");
 });
