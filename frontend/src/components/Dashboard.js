@@ -7,6 +7,7 @@ function Dashboard({ setIsLoggedIn }) {
 
 const [data,setData]=useState([]);
 const [user,setUser]=useState(null);
+
 const API_URL=process.env.REACT_APP_API_URL;
 
 useEffect(()=>{
@@ -17,46 +18,62 @@ if(!token){ setIsLoggedIn(false); return; }
 const headers={Authorization:`Bearer ${token}`};
 
 axios.get(`${API_URL}/api/airdata`,{headers})
-.then(r=>setData(r.data))
-.catch(()=>{
-localStorage.removeItem("token");
-setIsLoggedIn(false);
-});
+.then(r=>setData(Array.isArray(r.data)?r.data:[]))
+.catch(()=>{ setData([]); });
 
 axios.get(`${API_URL}/api/user`,{headers})
-.then(r=>setUser(r.data));
+.then(r=>setUser(r.data))
+.catch(()=>{});
 
 },[API_URL,setIsLoggedIn]);
 
+// ===== SAFE CALCULATIONS =====
 
-// ===== STATISTICS =====
+const avgAQI=data.length
+? (data.reduce((s,i)=>s+(Number(i.aqi)||0),0)/data.length).toFixed(1)
+:0;
 
-const avgAQI=data.length?
-(data.reduce((s,i)=>s+i.aqi,0)/data.length).toFixed(1):0;
+const maxPM=data.length
+? Math.max(...data.map(i=>Number(i.pm25)||0))
+:0;
 
-const maxPM=data.length?Math.max(...data.map(i=>i.pm25)):0;
+// SAFE arrays
+const years=data.map(i=>{
+const d=new Date(i.date);
+return isNaN(d)? "?" : d.getFullYear();
+});
 
-const years=data.map(i=>new Date(i.date).getFullYear());
-const aqi=data.map(i=>i.aqi);
+const aqi=data.map(i=>Number(i.aqi)||0);
 
-// regression
+// SAFE regression
 function regression(y){
+
+if(!y.length) return {slope:0,intercept:0};
+
 const n=y.length;
 const x=[...Array(n).keys()];
+
 const sx=x.reduce((a,b)=>a+b,0);
 const sy=y.reduce((a,b)=>a+b,0);
 const sxy=x.reduce((a,b,i)=>a+b*y[i],0);
 const sx2=x.reduce((a,b)=>a+b*b,0);
 
-const slope=(n*sxy-sx*sy)/(n*sx2-sx*sx);
+const denom=(n*sx2-sx*sx);
+
+if(denom===0) return {slope:0,intercept:sy/n};
+
+const slope=(n*sxy-sx*sy)/denom;
 const intercept=(sy-slope*sx)/n;
+
 return{slope,intercept};
 }
 
 const {slope,intercept}=regression(aqi);
 
+// SAFE forecast
 const forecast=[1,2,3].map(i=>slope*(aqi.length+i)+intercept);
 
+// SAFE chart
 const trendChart={
 labels:[...years,"+1","+2","+3"],
 datasets:[
@@ -81,16 +98,18 @@ setIsLoggedIn(false);
 };
 
 return(
+
 <div className="dash">
 
 <header>
 
-<h1>Air Quality Statistical Dashboard</h1>
+<h1>Air Quality Dashboard</h1>
 
 {user &&
 <div className="user">
-<img src={user.profilePic}/>
-<span>{user.name}</span>
+{user.profilePic &&
+<img src={user.profilePic} alt=""/>}
+<span>{user.name || "User"}</span>
 <button onClick={logout}>Logout</button>
 </div>
 }
@@ -102,13 +121,18 @@ return(
 <Card title="Average AQI" value={avgAQI}/>
 <Card title="Max PM2.5" value={maxPM}/>
 <Card title="Trend slope" value={slope.toFixed(2)}/>
-<Card title="Data points" value={data.length}/>
+<Card title="Records" value={data.length}/>
 
 </div>
 
 <div className="chartBox">
 <h2>Time-Series Trend + Forecast</h2>
-<Line data={trendChart}/>
+
+{data.length
+? <Line data={trendChart}/>
+: <p>No data available yet</p>
+}
+
 </div>
 
 </div>
