@@ -3,12 +3,36 @@ import axios from "axios";
 import { Line } from "react-chartjs-2";
 import "./Dashboard.css";
 
+/* ⭐ IMPORTANT FIX FOR CHART.JS */
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+  Filler
+} from "chart.js";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+  Filler
+);
+/* ⭐ END FIX */
+
 function Dashboard({ setIsLoggedIn }) {
 
 const [data,setData]=useState([]);
 const [user,setUser]=useState(null);
 
-const API_URL=process.env.REACT_APP_API_URL;
+/* ⭐ SAFE API URL (prevents crash if env missing) */
+const API_URL=process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 useEffect(()=>{
 
@@ -27,7 +51,7 @@ axios.get(`${API_URL}/api/user`,{headers})
 
 },[API_URL,setIsLoggedIn]);
 
-// ===== SAFE CALCULATIONS =====
+/* ===== CALCULATIONS ===== */
 
 const avgAQI=data.length
 ? (data.reduce((s,i)=>s+(Number(i.aqi)||0),0)/data.length).toFixed(1)
@@ -37,7 +61,6 @@ const maxPM=data.length
 ? Math.max(...data.map(i=>Number(i.pm25)||0))
 :0;
 
-// SAFE arrays
 const years=data.map(i=>{
 const d=new Date(i.date);
 return isNaN(d)? "?" : d.getFullYear();
@@ -45,7 +68,6 @@ return isNaN(d)? "?" : d.getFullYear();
 
 const aqi=data.map(i=>Number(i.aqi)||0);
 
-// SAFE regression
 function regression(y){
 
 if(!y.length) return {slope:0,intercept:0};
@@ -70,10 +92,8 @@ return{slope,intercept};
 
 const {slope,intercept}=regression(aqi);
 
-// SAFE forecast
 const forecast=[1,2,3].map(i=>slope*(aqi.length+i)+intercept);
 
-// SAFE chart
 const trendChart={
 labels:[...years,"+1","+2","+3"],
 datasets:[
@@ -81,13 +101,16 @@ datasets:[
 label:"AQI",
 data:[...aqi,null,null,null],
 borderColor:"#2563eb",
-tension:.4
+backgroundColor:"rgba(37,99,235,.15)",
+tension:.4,
+fill:true
 },
 {
 label:"Forecast",
 data:[...Array(aqi.length).fill(null),...forecast],
 borderColor:"#ef4444",
-borderDash:[6,6]
+borderDash:[6,6],
+tension:.4
 }
 ]
 };
@@ -107,8 +130,7 @@ return(
 
 {user &&
 <div className="user">
-{user.profilePic &&
-<img src={user.profilePic} alt=""/>}
+{user.profilePic && <img src={user.profilePic} alt=""/>}
 <span>{user.name || "User"}</span>
 <button onClick={logout}>Logout</button>
 </div>
