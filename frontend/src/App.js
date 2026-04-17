@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 import LoginModal from "./components/LoginModal";
-import Dashboard from "./components/Dashboard"; #login changed
+import Dashboard from "./components/Dashboard"; 
 import OAuthSuccess from "./components/OAuthSuccess";
 import "./App.css";
 
