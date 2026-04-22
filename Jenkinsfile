@@ -2,58 +2,36 @@ pipeline {
     agent any
 
     environment {
-        MONGO_URL = credentials('MONGO_URL')
-        JWT_SECRET = credentials('JWT_SECRET')
-        GOOGLE_CLIENT_ID = credentials('GOOGLE_CLIENT_ID')
-        GOOGLE_CLIENT_SECRET = credentials('GOOGLE_CLIENT_SECRET')
-        BACKEND_URL = "http://localhost:5000"
-        FRONTEND_URL = "http://localhost:3000"
+        EC2_HOST = "98.95.48.30"
+        EC2_USER = "ubuntu"
+        APP_DIR  = "/home/ubuntu/Air-quality-trend-analysis_final"
     }
 
     stages {
-
         stage('Checkout Code') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/YOUR_USERNAME/YOUR_REPO.git'
+                    url: 'https://github.com/sathwiksyr/Air-quality-trend-analysis_final.git'
             }
         }
 
-        stage('Create .env file') {
+        stage('Deploy to EC2') {
             steps {
-                writeFile file: '.env', text: """
-MONGO_URL=${MONGO_URL}
-JWT_SECRET=${JWT_SECRET}
-GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-BACKEND_URL=${BACKEND_URL}
-FRONTEND_URL=${FRONTEND_URL}
-"""
+                sshagent(credentials: ['ec2-ssh-key']) {
+                    bat """
+                        ssh -o StrictHostKeyChecking=no %EC2_USER%@%EC2_HOST% "cd %APP_DIR% && git pull origin main && docker compose down && docker compose up -d --build && docker ps"
+                    """
+                }
             }
         }
+    }
 
-        stage('Stop Old Containers') {
-            steps {
-                bat 'docker compose down'
-            }
+    post {
+        success {
+            echo 'Deployment Successful'
         }
-
-        stage('Build Images') {
-            steps {
-                bat 'docker compose build'
-            }
-        }
-
-        stage('Deploy Containers') {
-            steps {
-                bat 'docker compose up -d'
-            }
-        }
-
-        stage('Verify Running') {
-            steps {
-                bat 'docker ps'
-            }
+        failure {
+            echo 'Deployment Failed'
         }
     }
 }
