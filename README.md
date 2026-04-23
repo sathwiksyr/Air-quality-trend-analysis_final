@@ -1,20 +1,45 @@
-﻿---
+﻿# AQI Trends — Air Quality Trend Analysis
 
-## 🚀 Getting Started
+A full-stack web application for real-time air quality monitoring and trend analysis across major Indian and global cities.
 
-### Prerequisites
-
-Ensure the following are installed on your system:
-
-- [Docker](https://www.docker.com/get-started) & [Docker Compose](https://docs.docker.com/compose/)
-- [Node.js](https://nodejs.org/) v16+ *(for local development only)*
-- [Git](https://git-scm.com/)
+🌐 **Live:** [aqitrends.online](https://aqitrends.online)
 
 ---
 
+## Features
+
+- **Real-time AQI monitoring** — Live air quality index data for 15+ Indian and 6 global cities via WAQI and OpenAQ APIs
+- **Statistical analysis** — Mean, median, standard deviation, skewness, kurtosis, and Pearson correlation computed client-side
+- **Trend forecasting** — OLS regression, Holt-Winters exponential smoothing, and ARIMA-based forecasting
+- **Health recommendations** — Contextual health advisories based on current AQI levels
+- **User accounts** — Email/password signup and Google OAuth login
+- **Interactive charts** — Chart.js powered visualisations with annotation support
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, Chart.js, React Router |
+| Backend | Node.js, Express 5, Passport.js |
+| Database | MongoDB (Mongoose) |
+| Auth | JWT, Google OAuth 2.0 |
+| Containerisation | Docker, Docker Compose |
+| CI/CD | Jenkins → EC2 (SSH deploy) |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- [Docker](https://www.docker.com/get-started) & Docker Compose
+- Node.js v16+ *(local development only)*
+
 ### Environment Variables
 
-Create a `.env` file in the root directory before running the application:
+Create a `.env` file in the project root:
 
 ```env
 MONGO_URL=your_mongodb_connection_string
@@ -25,102 +50,80 @@ BACKEND_URL=http://localhost:5000
 FRONTEND_URL=http://localhost:3000
 ```
 
-> ⚠️ **Never commit your `.env` file to version control.** It is already listed in `.gitignore`.
+> ⚠️ Never commit `.env` to version control — it is already in `.gitignore`.
 
-To obtain Google OAuth credentials, visit the [Google Cloud Console](https://console.cloud.google.com/) and create an OAuth 2.0 Client ID under **APIs & Services → Credentials**.
-
----
+To obtain Google OAuth credentials, create an OAuth 2.0 Client ID at [Google Cloud Console](https://console.cloud.google.com/) under **APIs & Services → Credentials**.
 
 ### Run with Docker (Recommended)
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/sathwiksyr/Air-quality-trend-analysis_final.git
 cd Air-quality-trend-analysis_final
 
-# 2. Create your .env file (see above)
-
-# 3. Build and start all containers
+# Add your .env file, then:
 docker compose up --build -d
-
-# 4. Verify containers are running
 docker ps
 ```
 
 | Service | URL |
 |---|---|
-| Frontend | http://localhost:3001 |
+| Frontend | http://localhost:3000 |
 | Backend API | http://localhost:5000 |
 
-To stop all running containers:
-
 ```bash
+# Stop containers
 docker compose down
 ```
 
----
-
-### Run Locally (Without Docker)
-
-**Backend:**
+### Run Locally
 
 ```bash
-cd backend
-npm install
-npm start
+# Backend
+cd backend && npm install && npm start
+
+# Frontend (new terminal)
+cd frontend && npm install && npm start
 ```
-
-**Frontend:**
-
-```bash
-cd frontend
-npm install
-npm start
-```
-
-The frontend will run at `http://localhost:3000` and the backend at `http://localhost:5000`.
 
 ---
 
-## 🔄 CI/CD Pipeline
+## CI/CD Pipeline
 
-The project includes a fully automated **Jenkins pipeline** (`Jenkinsfile`) that handles:
+Automated Jenkins pipeline deploys to AWS EC2 on every push to `main`.
 
-| Stage | Description |
+| Stage | Action |
 |---|---|
-| `Checkout Code` | Pulls the latest code from the `main` branch |
-| `Create .env file` | Injects secrets from Jenkins credentials store |
-| `Stop Old Containers` | Tears down any previously running containers |
-| `Build Images` | Builds fresh Docker images for frontend and backend |
-| `Deploy Containers` | Spins up all services in detached mode |
-| `Verify Running` | Confirms all containers are healthy via `docker ps` |
+| Checkout Code | Pulls latest from `main` |
+| Deploy to EC2 | SSH into EC2, pull changes, rebuild and restart containers |
 
-**Jenkins Credentials Required:**
-
-Configure the following credentials in your Jenkins instance under **Manage Jenkins → Credentials**:
-
-- `MONGO_URL`
-- `JWT_SECRET`
-- `GOOGLE_CLIENT_ID`
-- `GOOGLE_CLIENT_SECRET`
+**Jenkins credentials required:** `MONGO_URL`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ec2-ssh-key`
 
 ---
 
-## 👥 Team
+## Project Structure
 
-This project was collaboratively developed by:
+```
+├── backend/
+│   ├── models/         # Mongoose User model
+│   ├── server.js       # Express app, auth routes, API endpoints
+│   └── Dockerfile
+├── frontend/
+│   ├── src/
+│   │   ├── components/ # Dashboard, LoginModal, OAuthSuccess
+│   │   └── App.js
+│   ├── nginx.conf
+│   └── Dockerfile
+├── docker-compose.yml
+└── Jenkinsfile
+```
+
+---
+
+## Team
 
 | Name | GitHub |
 |---|---|
-| **Sathwik S Y R** | [@sathwiksyr](https://github.com/sathwiksyr) |
-| **Sai Deep** | [@saideepeedara27-alt](https://github.com/saideepeedara27-alt) |
-| **Bharadwaj** | [@bharadwaj.ba](https://github.com/bharadwajba) |
-| **Jithendar** | — |
-
-
-
-<div align="center">
-
-Made with ❤️ by the Air Quality Analysis Team
-
-</div>
+| Sathwik S Y R | [@sathwiksyr](https://github.com/sathwiksyr) |
+| Sai Deep | [@saideepeedara27-alt](https://github.com/saideepeedara27-alt) |
+| Bharadwaj | [@bharadwajba](https://github.com/bharadwajba) |
+| Jithendar | [@jithendarreddy123](https://github.com/jithendarreddy123) |
