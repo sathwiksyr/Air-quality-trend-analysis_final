@@ -20,7 +20,7 @@ services:
     build:
       context: ./frontend
       args:
-        REACT_APP_API_URL: http://localhost:5000
+        REACT_APP_API_URL: https://aqitrends.online
     ports:
       - "3001:80"
     depends_on:
